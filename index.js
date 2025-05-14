@@ -10,10 +10,10 @@ const SELF_URL = "https://projectgambadata.onrender.com/leaderboard/top14";
 let cachedData = [];
 
 function maskUsername(username) {
-  const lower = username.toLowerCase();
-  if (lower.length <= 4) return lower;
-  return lower.slice(0, 2) + "***" + lower.slice(-2);
+  if (username.length <= 4) return username;
+  return username.slice(0, 2) + "***" + username.slice(-2);
 }
+
 
 async function fetchAndCacheData() {
   try {
