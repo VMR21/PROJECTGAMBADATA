@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const API_URL = "https://services.rainbet.com/v1/external/affiliates?start_at=2025-04-01&end_at=2025-04-30&key=F2iSgwwdyDrX8RzW14OF13AhUIImbTTK";
+const API_URL = "https://services.rainbet.com/v1/external/affiliates?start_at=2025-04-17&end_at=2025-05-17&key=CapZg7kT9DKv0IY17yvCAnd4LNguMWkp";
 
 let cachedData = [];
 
