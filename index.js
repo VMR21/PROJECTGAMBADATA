@@ -9,11 +9,18 @@ const SELF_URL = "https://projectgambadata.onrender.com/leaderboard/top14";
 
 let cachedData = [];
 
+// ✅ CORS headers manually
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*"); // Allow all origins
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  next();
+});
+
 function maskUsername(username) {
   if (username.length <= 4) return username;
   return username.slice(0, 2) + "***" + username.slice(-2);
 }
-
 
 async function fetchAndCacheData() {
   try {
@@ -38,7 +45,7 @@ async function fetchAndCacheData() {
 }
 
 fetchAndCacheData();
-setInterval(fetchAndCacheData, 5 * 60 * 1000);
+setInterval(fetchAndCacheData, 5 * 60 * 1000); // every 5 minutes
 
 app.get("/leaderboard/top14", (req, res) => {
   res.json(cachedData);
@@ -48,6 +55,6 @@ setInterval(() => {
   fetch(SELF_URL)
     .then(() => console.log(`[🔁] Self-pinged ${SELF_URL}`))
     .catch(err => console.error("[⚠️] Self-ping failed:", err.message));
-}, 270000);
+}, 270000); // every 4.5 mins
 
 app.listen(PORT, () => console.log(`🚀 Running on port ${PORT}`));
