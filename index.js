@@ -5,11 +5,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const API_URL = "https://services.rainbet.com/v1/external/affiliates?start_at=2025-04-17&end_at=2025-05-17&key=CapZg7kT9DKv0IY17yvCAnd4LNguMWkp";
 
+// REPLACE with your actual deployed Render domain
+const SELF_URL = "https://projectgambadata.onrender.com/";
+
 let cachedData = [];
 
 function maskUsername(username) {
-  if (username.length <= 4) return username;
-  return username.slice(0, 2) + "***" + username.slice(-2);
+  const lower = username.toLowerCase();
+  if (lower.length <= 4) return lower;
+  return lower.slice(0, 2) + "***" + lower.slice(-2);
 }
 
 async function fetchAndCacheData() {
@@ -21,6 +25,7 @@ async function fetchAndCacheData() {
 
     const sorted = json.affiliates.sort((a, b) => parseFloat(b.wagered_amount) - parseFloat(a.wagered_amount));
     const top10 = sorted.slice(0, 10);
+
     if (top10.length >= 2) [top10[0], top10[1]] = [top10[1], top10[0]];
 
     cachedData = top10.map(entry => ({
@@ -29,27 +34,28 @@ async function fetchAndCacheData() {
       weightedWager: Math.round(parseFloat(entry.wagered_amount))
     }));
 
-    console.log(`[✅] Data updated at ${new Date().toLocaleTimeString()}`);
+    console.log(`[✅] Leaderboard updated at ${new Date().toLocaleTimeString()}`);
   } catch (err) {
-    console.error("[❌] Fetch failed:", err.message);
+    console.error("[❌] Failed to fetch Rainbet data:", err.message);
   }
 }
 
-// Update data every 5 mins
-setInterval(fetchAndCacheData, 5 * 60 * 1000);
-fetchAndCacheData(); // initial fetch
+// Initial + periodic refresh
+fetchAndCacheData();
+setInterval(fetchAndCacheData, 5 * 60 * 1000); // every 5 mins
 
-// Serve cached data
+// Serve leaderboard data
 app.get("/", (req, res) => {
   res.json(cachedData);
 });
 
-// Self-ping every 4.5 mins
+// Self-ping every 4.5 mins to prevent Render sleep
 setInterval(() => {
-  const url = `http://localhost:${PORT}/`;
-  fetch(url)
-    .then(() => console.log(`[🔁] Self-pinged ${url}`))
+  fetch(SELF_URL)
+    .then(() => console.log(`[🔁] Self-pinged ${SELF_URL}`))
     .catch(err => console.error("[⚠️] Self-ping failed:", err.message));
-}, 270000); // 4.5 minutes
+}, 270000); // 4.5 min
 
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
