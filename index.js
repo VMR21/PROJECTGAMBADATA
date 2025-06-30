@@ -9,7 +9,6 @@ const SELF_URL = "https://projectgambadata.onrender.com/leaderboard/top14";
 
 let cachedData = [];
 
-// ✅ CORS headers
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -22,65 +21,50 @@ function maskUsername(username) {
   return username.slice(0, 2) + "***" + username.slice(-2);
 }
 
-// 🗓 Get correct 17th–16th period that includes today
-function getStartEndDates() {
+function getDynamicApiUrl() {
   const now = new Date();
-  let endMonth = now.getUTCMonth();
-  let endYear = now.getUTCFullYear();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const start = new Date(Date.UTC(year, month, 1));
+  const end = new Date(Date.UTC(year, month + 1, 0));
+  const startStr = start.toISOString().slice(0, 10);
+  const endStr = end.toISOString().slice(0, 10);
 
-  const thisMonth16 = new Date(Date.UTC(endYear, endMonth, 16, 23, 59, 59));
-
-  // If today is after the 16th, shift window forward
-  if (now > thisMonth16) {
-    endMonth += 1;
-    if (endMonth > 11) {
-      endMonth = 0;
-      endYear += 1;
-    }
-  }
-
-  const end_at = new Date(Date.UTC(endYear, endMonth, 16)).toISOString().split("T")[0];
-
-  // Get 17th of previous month
-  let startMonth = endMonth - 1;
-  let startYear = endYear;
-  if (startMonth < 0) {
-    startMonth = 11;
-    startYear -= 1;
-  }
-
-  const start_at = new Date(Date.UTC(startYear, startMonth, 17)).toISOString().split("T")[0];
-
-  return { start_at, end_at };
+  return `https://services.rainbet.com/v1/external/affiliates?start_at=${startStr}&end_at=${endStr}&key=${API_KEY}`;
 }
 
 async function fetchAndCacheData() {
   try {
-    const { start_at, end_at } = getStartEndDates();
-    const apiUrl = `https://services.rainbet.com/v1/external/affiliates?start_at=${start_at}&end_at=${end_at}&key=${API_KEY}`;
-
-    const response = await fetch(apiUrl);
+    const response = await fetch(getDynamicApiUrl());
     const json = await response.json();
     if (!json.affiliates) throw new Error("No data");
 
-    const sorted = json.affiliates.sort((a, b) => parseFloat(b.wagered_amount) - parseFloat(a.wagered_amount));
-    const top10 = sorted.slice(0, 10);
-    if (top10.length >= 2) [top10[0], top10[1]] = [top10[1], top10[0]];
+    const sorted = json.affiliates
+      .filter(a => a.username.toLowerCase() !== "vampirenoob")
+      .sort((a, b) => parseFloat(b.wagered_amount) - parseFloat(a.wagered_amount))
+      .slice(0, 10);
 
-    cachedData = top10.map(entry => ({
+    const mapped = sorted.map(entry => ({
       username: maskUsername(entry.username),
       wagered: Math.round(parseFloat(entry.wagered_amount)),
-      weightedWager: Math.round(parseFloat(entry.wagered_amount))
+      weightedWager: Math.round(parseFloat(entry.wagered_amount)),
     }));
 
-    console.log(`[✅] Leaderboard updated (${start_at} → ${end_at})`);
+    // Swap 1st and 2nd
+    if (mapped.length >= 2) {
+      [mapped[0], mapped[1]] = [mapped[1], mapped[0]];
+    }
+
+    cachedData = mapped;
+
+    console.log(`[✅] Leaderboard updated`);
   } catch (err) {
     console.error("[❌] Failed to fetch Rainbet data:", err.message);
   }
 }
 
 fetchAndCacheData();
-setInterval(fetchAndCacheData, 5 * 60 * 1000); // every 5 minutes
+setInterval(fetchAndCacheData, 5 * 60 * 1000);
 
 app.get("/leaderboard/top14", (req, res) => {
   res.json(cachedData);
@@ -89,7 +73,7 @@ app.get("/leaderboard/top14", (req, res) => {
 setInterval(() => {
   fetch(SELF_URL)
     .then(() => console.log(`[🔁] Self-pinged ${SELF_URL}`))
-    .catch(err => console.error("[⚠️] Self-ping failed:", err.message));
-}, 270000); // every 4.5 minutes
+    .catch((err) => console.error("[⚠️] Self-ping failed:", err.message));
+}, 270000);
 
 app.listen(PORT, () => console.log(`🚀 Running on port ${PORT}`));
