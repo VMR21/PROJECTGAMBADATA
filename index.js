@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SELF_URL = "https://mrterpyydata.onrender.com/leaderboard/top14";
+const SELF_URL = "https://projectgambadata.onrender.com/leaderboard/top14";
 const API_KEY = "CapZg7kT9DKv0IY17yvCAnd4LNguMWkp";
 
 let cachedData = [];
